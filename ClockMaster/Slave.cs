@@ -16,8 +16,16 @@ namespace ClockMaster
         {
             ID = id;
             Port = port;
-            InitStatusTimer();
+            Console.WriteLine($"{port.PortName}: Slave Found!");
+            //InitStatusTimer();
             StartReceivingData();
+        }
+
+        public void SetPosition(int directPos, int indirectPos)
+        {
+            string direct = directPos.ToString().PadLeft(4,'0');
+            string indirect = indirectPos.ToString().PadLeft(4,'0');
+            Port.WriteLine($"setPosition: {direct},{indirect}");
         }
 
         private void InitStatusTimer()

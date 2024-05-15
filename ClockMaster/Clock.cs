@@ -16,10 +16,27 @@ internal class Clock
 
     private static void Main(string[] args)
     {
+        foreach (string portName in SerialPort.GetPortNames())
+        {
+            Console.WriteLine("   {0}", portName);
+        }
+
         InitScanTimer();
         InitIDTimer();
         StartReceivingData();
         Console.ReadLine();
+
+        string? input = "";
+
+        //Keeps asking user for input and sends the input to the port
+        while (input != "End")
+        {
+            input = Console.ReadLine();
+            HandleInput(input);
+        }
+
+        Task.WhenAll(tasks);
+
         //Display all port names connected to the device
         /*foreach (string portName in SerialPort.GetPortNames())
         {
@@ -47,6 +64,20 @@ internal class Clock
         Port.Close();*/
     }
 
+    private static void HandleInput(string input)
+    {
+        if (input.StartsWith("setPosition:"))
+        {
+            string[] args = input.Split(':')[1].Split(',');
+
+            string portName = args[0].Trim();
+            int directPos = int.Parse(args[1].Trim());
+            int indirectPos = int.Parse(args[2].Trim());
+
+            Slaves.Find(x => x.Port.PortName == portName).SetPosition(directPos, indirectPos);
+        }
+    }
+
     private static void InitScanTimer()
     {
         ScanTimer = new Timer();
@@ -71,6 +102,7 @@ internal class Clock
         foreach (SerialPort port in nonSlavePorts)
         {
             port.WriteLine(Commands.REQUEST_ID_COMMAND);
+            Console.WriteLine($"ID Request Sent to {port.PortName}");
         }
     }
 
@@ -92,6 +124,7 @@ internal class Clock
             {
                 SerialPort newPort = new SerialPort(portName, 115200, Parity.None, 8, StopBits.One);
                 newPort.Open();
+                Console.WriteLine($"{newPort.PortName} Connected!");
                 Ports.Add(newPort);
             }
         }
@@ -112,10 +145,12 @@ internal class Clock
                 {
                     foreach (SerialPort port in Ports)
                     {
+                        Console.WriteLine($"Reading from {port.PortName}");
                         if (Slaves.Any(x => x.Port.PortName == port.PortName)) continue;
 
                         try
                         {
+                            Console.WriteLine($"Reading from {port.PortName}");
                             string message = port.ReadLine();
                             Console.WriteLine($"{port.PortName}: {message}");
 
@@ -123,7 +158,7 @@ internal class Clock
                             {
                                 string id = message.Split(':')[1].Trim();
                                 Slave newSlave = new Slave(id, port);
-                                newSlave.OnPortDisconnected += NewSlave_OnSlaveDisconnected; ;
+                                //newSlave.OnPortDisconnected += NewSlave_OnSlaveDisconnected;
                                 Slaves.Add(newSlave);
                             }
                         }
@@ -138,10 +173,6 @@ internal class Clock
             });
         }
         catch { }
-    }
-
-    private static void NewSlave_OnSlaveDisconnected(object? sender, EventArgs e)
-    {
-        throw new NotImplementedException();
+        Console.WriteLine($"Reading");
     }
 }
